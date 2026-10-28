@@ -128,5 +128,14 @@ public class T3ComposerEditorModule: Module {
         view.setSelection(start: start, end: end)
       }
     }
+
+    // Expo exposes the first registered view as the module's default editor.
+    View(T3ComposerImageDropView.self) {
+      ViewName("ImageDropTarget")
+      Events("onDropImages")
+      Prop("enabled") { (view: T3ComposerImageDropView, enabled: Bool) in
+        view.enabled = enabled
+      }
+    }
   }
 }
