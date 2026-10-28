@@ -3424,15 +3424,12 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
               <div
                 data-chat-composer-footer="true"
                 className={cn(
-                  "flex min-w-0 flex-nowrap items-center overflow-visible px-3 pb-3 sm:px-4 sm:pb-4",
+                  "flex min-w-0 flex-nowrap items-center overflow-visible px-2 pb-2",
                   pendingUserInputs.length > 0 && "pt-2",
                   showMobilePendingAnswerActions && "hidden sm:flex",
                 )}
               >
-                {/* Attach sits at the start of the row, its icon in line with the prompt text. */}
-                {composerAttachButton ? (
-                  <div className="-ms-1.5 me-2">{composerAttachButton}</div>
-                ) : null}
+                {composerAttachButton ? <div className="me-2">{composerAttachButton}</div> : null}
                 <div
                   data-chat-composer-actions="right"
                   data-chat-composer-transition-actions="true"
