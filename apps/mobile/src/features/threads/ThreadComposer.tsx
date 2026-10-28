@@ -2,6 +2,7 @@ import { useSidebarWorkspaceTabs } from "../workspace/useSystemWorkspaceTabBar";
 import { Button } from "../../components/ui/Button";
 import * as Dialog from "../../components/ui/Dialog";
 import type { ComposerTextPaste } from "../../native/T3ComposerEditor.types";
+import { ComposerImageDropTarget } from "../../native/ComposerImageDropTarget";
 import { useAdaptiveWorkspaceLayout } from "../layout/AdaptiveWorkspaceLayout";
 import {
   useAppearancePreferences,
@@ -796,11 +797,21 @@ export const ThreadComposer = function ThreadComposer(props: ThreadComposerProps
     </View>
   );
 
+  const handleNativeImages = (uris: ReadonlyArray<string>) => {
+    if (isSubmissionLocked) return;
+    pendingNativeImagePasteCountRef.current += 1;
+    void props.onNativePasteImages(uris).finally(() => {
+      pendingNativeImagePasteCountRef.current -= 1;
+    });
+  };
+
   return (
-    <Animated.View
+    <ComposerImageDropTarget
+      enabled={!isSubmissionLocked && !props.hidden}
+      onDropImages={handleNativeImages}
       onLayout={(event) => props.onHeightChange?.(event.nativeEvent.layout.height)}
-      className="px-[12px]"
       style={{
+        paddingHorizontal: 12,
         paddingTop: 6,
         paddingBottom: (props.bottomInset ?? 0) + THREAD_COMPOSER_BOTTOM_GUTTER,
         backgroundColor:
@@ -1012,13 +1023,7 @@ export const ThreadComposer = function ThreadComposer(props: ThreadComposerProps
                   if (!isSubmissionLocked) props.onChangeDraftMessage(text);
                 }}
                 onSelectionChange={composerMenu.onSelectionChange}
-                onPasteImages={(uris) => {
-                  if (isSubmissionLocked) return;
-                  pendingNativeImagePasteCountRef.current += 1;
-                  void props.onNativePasteImages(uris).finally(() => {
-                    pendingNativeImagePasteCountRef.current -= 1;
-                  });
-                }}
+                onPasteImages={handleNativeImages}
                 onPasteText={(paste) => {
                   if (isSubmissionLocked) return;
                   const insertPaste = () => {
@@ -1188,6 +1193,6 @@ export const ThreadComposer = function ThreadComposer(props: ThreadComposerProps
 
       <VideoPreviewModal source={previewVideo} onRequestClose={closePreview} />
       <FilePreviewModal source={previewFile} onRequestClose={closePreview} />
-    </Animated.View>
+    </ComposerImageDropTarget>
   );
 };

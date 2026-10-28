@@ -272,6 +272,13 @@ private final class ComposerTextView: UITextView {
   }
 
   func loadImages(from providers: [NSItemProvider]) {
+    Self.loadImages(from: providers) { [weak self] urls in
+      guard let self, !self.isReadOnly else { return }
+      self.onPasteImages?(urls)
+    }
+  }
+
+  static func loadImages(from providers: [NSItemProvider], completion: @escaping ([String]) -> Void) {
     let group = DispatchGroup()
     let lock = NSLock()
     var images = [UIImage?](repeating: nil, count: providers.count)
@@ -289,13 +296,10 @@ private final class ComposerTextView: UITextView {
       }
     }
 
-    group.notify(queue: .main) { [weak self] in
-      guard let self, !self.isReadOnly else {
-        return
-      }
+    group.notify(queue: .main) {
       let urls = images.compactMap { $0 }.compactMap(Self.writeTemporaryImage)
       if !urls.isEmpty {
-        self.onPasteImages?(urls)
+        completion(urls)
       }
     }
   }
@@ -1269,6 +1273,35 @@ public final class T3ComposerEditorView: ExpoView, UITextViewDelegate, UITextDro
       }
     }
     return renderedSources == expectedSources
+  }
+}
+
+final class T3ComposerImageDropView: ExpoView, UIDropInteractionDelegate {
+  let onDropImages = EventDispatcher()
+  var enabled = true
+
+  required init(appContext: AppContext? = nil) {
+    super.init(appContext: appContext)
+    addInteraction(UIDropInteraction(delegate: self))
+  }
+
+  func dropInteraction(_ interaction: UIDropInteraction, canHandle session: UIDropSession) -> Bool {
+    enabled && session.canLoadObjects(ofClass: UIImage.self)
+  }
+
+  func dropInteraction(_ interaction: UIDropInteraction, sessionDidUpdate session: UIDropSession)
+    -> UIDropProposal {
+    UIDropProposal(operation: enabled ? .copy : .cancel)
+  }
+
+  func dropInteraction(_ interaction: UIDropInteraction, performDrop session: UIDropSession) {
+    guard enabled else { return }
+    let providers = session.items.map(\.itemProvider).filter { $0.canLoadObject(ofClass: UIImage.self) }
+
+    ComposerTextView.loadImages(from: providers) { [weak self] urls in
+      guard let self, self.enabled else { return }
+      self.onDropImages(["uris": urls])
+    }
   }
 }
 
