@@ -797,6 +797,10 @@ export const ThreadComposer = function ThreadComposer(props: ThreadComposerProps
     </View>
   );
 
+  const handleImageLoadingChange = (loading: boolean) => {
+    pendingNativeImagePasteCountRef.current += loading ? 1 : -1;
+  };
+
   const handleNativeImages = (uris: ReadonlyArray<string>) => {
     if (isSubmissionLocked) return;
     pendingNativeImagePasteCountRef.current += 1;
@@ -808,6 +812,7 @@ export const ThreadComposer = function ThreadComposer(props: ThreadComposerProps
   return (
     <ComposerImageDropTarget
       enabled={!isSubmissionLocked && !props.hidden}
+      onImageLoadingChange={handleImageLoadingChange}
       onDropImages={handleNativeImages}
       onLayout={(event) => props.onHeightChange?.(event.nativeEvent.layout.height)}
       style={{
@@ -1023,6 +1028,7 @@ export const ThreadComposer = function ThreadComposer(props: ThreadComposerProps
                   if (!isSubmissionLocked) props.onChangeDraftMessage(text);
                 }}
                 onSelectionChange={composerMenu.onSelectionChange}
+                onImageLoadingChange={handleImageLoadingChange}
                 onPasteImages={handleNativeImages}
                 onPasteText={(paste) => {
                   if (isSubmissionLocked) return;
