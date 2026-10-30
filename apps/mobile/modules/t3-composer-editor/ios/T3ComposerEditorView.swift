@@ -275,9 +275,11 @@ private final class ComposerTextView: UITextView {
 
   func loadImages(from providers: [NSItemProvider], preferFileRepresentation: Bool = false) {
     onImageLoadingChange?(true)
-    Self.loadImages(from: providers, preferFileRepresentation: preferFileRepresentation) { [weak self] urls in
+    Self.loadImages(from: providers, preferFileRepresentation: preferFileRepresentation) { [weak self] images in
       guard let self else { return }
-      if !self.isReadOnly { self.onPasteImages?(urls) }
+      if !self.isReadOnly {
+        self.onPasteImages?(images.compactMap(Self.writeTemporaryImage))
+      }
       self.onImageLoadingChange?(false)
     }
   }
@@ -320,7 +322,7 @@ private final class ComposerTextView: UITextView {
   static func loadImages(
     from providers: [NSItemProvider],
     preferFileRepresentation: Bool = false,
-    completion: @escaping ([String]) -> Void
+    completion: @escaping ([UIImage]) -> Void
   ) {
     let group = DispatchGroup()
     let lock = NSLock()
@@ -340,8 +342,7 @@ private final class ComposerTextView: UITextView {
     }
 
     group.notify(queue: .main) {
-      let urls = images.compactMap { $0 }.compactMap(Self.writeTemporaryImage)
-      completion(urls)
+      completion(images.compactMap { $0 })
     }
   }
 
@@ -417,7 +418,7 @@ private final class ComposerTextView: UITextView {
     return sourceOffset
   }
 
-  private static func writeTemporaryImage(_ image: UIImage) -> String? {
+  static func writeTemporaryImage(_ image: UIImage) -> String? {
     guard let data = image.pngData() else {
       return nil
     }
@@ -1346,9 +1347,11 @@ final class T3ComposerImageDropView: ExpoView, UIDropInteractionDelegate {
     let providers = session.items.map(\.itemProvider)
 
     onImageLoadingChange(["loading": true])
-    ComposerTextView.loadImages(from: providers, preferFileRepresentation: true) { [weak self] urls in
+    ComposerTextView.loadImages(from: providers, preferFileRepresentation: true) { [weak self] images in
       guard let self else { return }
-      if self.enabled { self.onDropImages(["uris": urls]) }
+      if self.enabled {
+        self.onDropImages(["uris": images.compactMap(ComposerTextView.writeTemporaryImage)])
+      }
       self.onImageLoadingChange(["loading": false])
     }
   }

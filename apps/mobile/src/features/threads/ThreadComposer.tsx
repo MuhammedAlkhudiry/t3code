@@ -35,6 +35,7 @@ import type { ReactNode } from "react";
 import { useEffect, useEffectEvent, useRef, useState, type RefObject } from "react";
 import { Keyboard, Platform, View, type ViewStyle } from "react-native";
 import { composerImageGallery } from "../../lib/composerImageGallery";
+import { removeTemporaryPastedImage } from "../../lib/composerImages";
 import { filePreviewGallery } from "../../lib/filePreviewGallery";
 import { FilePreviewModal, type FilePreviewSource } from "../../components/FilePreviewModal";
 import {
@@ -413,6 +414,7 @@ export const ThreadComposer = function ThreadComposer(props: ThreadComposerProps
   const [isFocused, setIsFocused] = useState(false);
   const pendingPastedTextAttachmentCountRef = useRef(0);
   const pendingNativeImagePasteCountRef = useRef(0);
+  const [pendingNativeImagePasteCount, setPendingNativeImagePasteCount] = useState(0);
   const [pendingPastedTextAttachmentCount, setPendingPastedTextAttachmentCount] = useState(0);
   const settingsRoutePresentedRef = useRef(false);
   const settingsSheetPresentation = useThreadSettingsSheetPresentation({
@@ -596,6 +598,7 @@ export const ThreadComposer = function ThreadComposer(props: ThreadComposerProps
     (queuedEdit?.saving === true ? "Saving…" : null) ??
     props.sendBlockedReason ??
     (pendingPastedTextAttachmentCount > 0 ? "Attaching pasted text" : null) ??
+    (pendingNativeImagePasteCount > 0 ? "Attaching images" : null) ??
     attachmentBlockReason;
   const canSend =
     (props.canOperateThread || props.connectionState !== "connected") &&
@@ -799,13 +802,17 @@ export const ThreadComposer = function ThreadComposer(props: ThreadComposerProps
 
   const handleImageLoadingChange = (loading: boolean) => {
     pendingNativeImagePasteCountRef.current += loading ? 1 : -1;
+    setPendingNativeImagePasteCount(pendingNativeImagePasteCountRef.current);
   };
 
   const handleNativeImages = (uris: ReadonlyArray<string>) => {
-    if (isSubmissionLocked) return;
-    pendingNativeImagePasteCountRef.current += 1;
+    if (isSubmissionLocked || props.hidden) {
+      void Promise.all(uris.map(removeTemporaryPastedImage));
+      return;
+    }
+    handleImageLoadingChange(true);
     void props.onNativePasteImages(uris).finally(() => {
-      pendingNativeImagePasteCountRef.current -= 1;
+      handleImageLoadingChange(false);
     });
   };
 
